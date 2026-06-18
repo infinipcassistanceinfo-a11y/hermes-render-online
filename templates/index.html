@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes Agent Workspace</title>
+    <meta name="description" content="Workspace d'interaction sécurisé avec l'agent autonome Hermes.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Main Style sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo-container">
+            <span class="status-indicator online" id="status-dot"></span>
+            <h1 id="app-title">Hermes Agent</h1>
+        </div>
+        {% if authenticated %}
+        <div class="header-actions">
+            <button id="btn-clear" class="btn btn-secondary btn-sm" onclick="clearChat()">Effacer le chat</button>
+            <a href="{{ url_for('logout') }}" id="link-logout" class="btn btn-danger btn-sm">Déconnexion</a>
+        </div>
+        {% endif %}
+    </header>
+
+    <main class="app-main-content">
+        {% if not authenticated %}
+        <!-- Authentication Container -->
+        <section class="auth-wrapper" id="auth-section">
+            <div class="auth-card glass-panel">
+                <div class="auth-logo-glowing">
+                    <span class="glyph">H</span>
+                </div>
+                <h2>Terminal d'Accès</h2>
+                <p class="auth-subtitle">Veuillez entrer votre mot de passe pour réveiller l'Agent Hermes.</p>
+                
+                <form action="{{ url_for('index') }}" method="POST" class="auth-form" id="login-form">
+                    <div class="form-group">
+                        <label for="password-input">Mot de passe</label>
+                        <input type="password" name="password" id="password-input" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    {% if error %}
+                    <div class="alert alert-error" id="auth-error-msg">
+                        <span class="alert-icon">⚠️</span> {{ error }}
+                    </div>
+                    {% endif %}
+                    <button type="submit" id="btn-submit-auth" class="btn btn-primary btn-block">S'authentifier</button>
+                </form>
+            </div>
+        </section>
+        {% else %}
+        <!-- Workspace Chat Container -->
+        <section class="workspace-grid" id="chat-section">
+            <!-- Left Side: Terminal Action Steps Log -->
+            <aside class="console-sidebar glass-panel" id="sidebar-logs">
+                <div class="sidebar-header">
+                    <h3>Console d'Exécution</h3>
+                    <span class="badge" id="badge-steps-count">0 étapes</span>
+                </div>
+                <div class="console-log-area" id="console-logs">
+                    <div class="empty-log" id="empty-logs-placeholder">
+                        Les outils et actions d'Hermes (recherche, navigation) s'afficheront ici en temps réel lors de l'exécution.
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Side: Real Conversation chat area -->
+            <section class="chat-container glass-panel" id="chat-workspace">
+                <div class="chat-history" id="chat-history-box">
+                    {% if session.get('messages') | length == 0 %}
+                    <div class="chat-welcome-card" id="welcome-card">
+                        <div class="welcome-avatar">H</div>
+                        <h2>Bonjour, je suis Hermes</h2>
+                        <p>Je suis prêt à accomplir vos directives. Donnez-moi un ordre, comme faire une recherche sur le web, extraire des données, ou synthétiser un sujet.</p>
+                        <div class="quick-prompts">
+                            <button class="quick-btn" onclick="prefillInput('Fais une recherche sur le web sur les dernières nouveautés de Python 3.13')">Recherche Python 3.13</button>
+                            <button class="quick-btn" onclick="prefillInput('Explique-moi ce qu\'est render.yaml et comment configurer Render')">Guide Render.yaml</button>
+                        </div>
+                    </div>
+                    {% else %}
+                        {% for msg in session.get('messages') %}
+                            {% if msg.role == 'user' %}
+                            <div class="message-row user">
+                                <div class="message-bubble">{{ msg.content }}</div>
+                            </div>
+                            {% elif msg.role == 'assistant' %}
+                            <div class="message-row assistant">
+                                <div class="message-avatar">H</div>
+                                <div class="message-bubble">{{ msg.content | replace('\n', '<br>') | safe }}</div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <div class="chat-input-area">
+                    <form id="chat-form" class="chat-form-element" onsubmit="sendMessage(event)">
+                        <input type="text" id="chat-input-text" placeholder="Écrivez votre directive pour Hermes..." required autocomplete="off">
+                        <button type="submit" id="btn-send-message" class="btn btn-primary">
+                            <span>Envoyer</span>
+                            <svg class="send-icon" viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </section>
+        {% endif %}
+    </main>
+
+    <footer class="app-footer">
+        <p>Hermes Agent Online &bull; Mode: {{ 'online' if HERMES_MODE == 'online' else 'local' }}</p>
+    </footer>
+
+    {% if authenticated %}
+    <script>
+        const chatBox = document.getElementById('chat-history-box');
+        const chatInput = document.getElementById('chat-input-text');
+        const consoleLogs = document.getElementById('console-logs');
+        const badgeSteps = document.getElementById('badge-steps-count');
+        const emptyLogsPlaceholder = document.getElementById('empty-logs-placeholder');
+
+        // Scroll to bottom on load
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        function prefillInput(text) {
+            chatInput.value = text;
+            chatInput.focus();
+        }
+
+        function appendMessage(role, text) {
+            // Remove welcome card if present
+            const welcomeCard = document.getElementById('welcome-card');
+            if (welcomeCard) {
+                welcomeCard.remove();
+            }
+
+            const row = document.createElement('div');
+            row.className = `message-row ${role}`;
+            
+            if (role === 'assistant') {
+                row.innerHTML = `
+                    <div class="message-avatar">H</div>
+                    <div class="message-bubble">${text.replace(/\n/g, '<br>')}</div>
+                `;
+            } else {
+                row.innerHTML = `
+                    <div class="message-bubble">${escapeHtml(text)}</div>
+                `;
+            }
+            
+            chatBox.appendChild(row);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function appendTypingIndicator() {
+            const row = document.createElement('div');
+            row.className = 'message-row assistant typing-row';
+            row.id = 'typing-indicator';
+            row.innerHTML = `
+                <div class="message-avatar">H</div>
+                <div class="message-bubble typing-bubble">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            `;
+            chatBox.appendChild(row);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function updateLogs(steps) {
+            if (!steps || steps.length === 0) return;
+            
+            // Remove placeholder if present
+            if (emptyLogsPlaceholder) {
+                emptyLogsPlaceholder.style.display = 'none';
+            }
+            
+            consoleLogs.innerHTML = '';
+            badgeSteps.textContent = `${steps.length} étape${steps.length > 1 ? 's' : ''}`;
+            
+            steps.forEach((step, idx) => {
+                const logItem = document.createElement('div');
+                logItem.className = 'console-log-item';
+                
+                // Parse tool execution name for better styling
+                let label = "SYSTEM";
+                let isTool = false;
+                if (step.includes("tool 'web_search'")) {
+                    label = "WEB SEARCH";
+                    isTool = true;
+                } else if (step.includes("tool 'web_browse'")) {
+                    label = "BROWSE PAGE";
+                    isTool = true;
+                }
+                
+                logItem.innerHTML = `
+                    <span class="log-time">[Step ${idx + 1}]</span>
+                    <span class="log-label ${isTool ? 'tool-label' : 'system-label'}">${label}</span>
+                    <p class="log-message">${escapeHtml(step)}</p>
+                `;
+                consoleLogs.appendChild(logItem);
+            });
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
+
+        async function sendMessage(event) {
+            event.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Clear input
+            chatInput.value = '';
+            
+            // Append user message to screen
+            appendMessage('user', message);
+            
+            // Show typing state
+            appendTypingIndicator();
+            
+            // Clear current console steps
+            if (emptyLogsPlaceholder) {
+                emptyLogsPlaceholder.style.display = 'block';
+            }
+            consoleLogs.innerHTML = '';
+            badgeSteps.textContent = '0 étapes';
+            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const data = await response.json();
+                removeTypingIndicator();
+
+                if (response.ok) {
+                    appendMessage('assistant', data.response);
+                    updateLogs(data.steps);
+                } else {
+                    appendMessage('assistant', `Erreur: ${data.error || "Impossible de joindre l'agent."}`);
+                }
+            } catch (err) {
+                removeTypingIndicator();
+                appendMessage('assistant', `Erreur de communication avec le serveur: ${err.message}`);
+            }
+        }
+
+        async function clearChat() {
+            if (!confirm("Voulez-vous vraiment effacer l'historique des messages ?")) return;
+            try {
+                const response = await fetch('/clear_chat', { method: 'POST' });
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert("Erreur lors de la suppression de l'historique.");
+                }
+            } catch (err) {
+                alert("Erreur réseau.");
+            }
+        }
+    </script>
+    {% endif %}
+</body>
+</html>

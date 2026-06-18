@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: hermes-render-online
+    runtime: docker
+    plan: free
+    envVars:
+      - key: HERMES_MODE
+        value: online
+      - key: PORT
+        value: 10000
+      - key: HERMES_PASSWORD
+        sync: false
+        description: Password required to access your Hermes chat interface.
+      - key: OPENAI_API_KEY
+        sync: false
+        description: OpenAI API Key (or other OpenAI-compatible provider key like OpenRouter).
+      - key: SECRET_KEY
+        generateValue: true
+        description: A secret key used by Flask to secure user session cookies (automatically generated).
