@@ -18,7 +18,7 @@ services:
         value: https://ollama.com/v1
         description: Base URL for OpenAI-compatible API (Ollama Cloud, OpenRouter, etc.).
       - key: HERMES_MODEL
-        value: llama3.1
+        value: glm5
         description: Model to use (llama3.1, gpt-4o-mini, etc.).
       - key: SECRET_KEY
         generateValue: true
