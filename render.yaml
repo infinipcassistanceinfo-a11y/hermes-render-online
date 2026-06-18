@@ -3,6 +3,10 @@ services:
     name: hermes-render-online
     runtime: docker
     plan: free
+    disk:
+      name: hermes-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: HERMES_MODE
         value: online
