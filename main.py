@@ -17,6 +17,31 @@ app.secret_key = os.getenv("SECRET_KEY", "hermes_secure_session_key_91827364")
 HERMES_PASSWORD = os.getenv("HERMES_PASSWORD")
 HERMES_MODE = os.getenv("HERMES_MODE", "online")
 
+# Persistent storage path (Render disk)
+DATA_DIR = os.getenv("DATA_DIR", "/data")
+MEMORY_FILE = os.path.join(DATA_DIR, "memory.json")
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+def load_memory():
+    """Load persistent memory from disk"""
+    try:
+        if os.path.exists(MEMORY_FILE):
+            with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading memory: {e}")
+    return {}
+
+def save_memory(memory):
+    """Save persistent memory to disk"""
+    try:
+        with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(memory, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error saving memory: {e}")
+
 # Initialize OpenAI client
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL", None) # Allows using OpenRouter or local LLMs
