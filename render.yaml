@@ -19,7 +19,7 @@ services:
         description: Base URL for OpenAI-compatible API (Ollama Cloud, OpenRouter, etc.). Leave empty for OpenAI, or use https://ollama.com/v1 for Ollama Cloud, or https://openrouter.ai/api/v1 for OpenRouter.
       - key: HERMES_MODEL
         sync: false
-        description: Model to use (glm5 for Ollama, or openrouter/quen-2.5-72b, gpt-4o-mini, etc.).
+        description: Model to use (glm-5.1 for Ollama, or openrouter/quen-2.5-72b, gpt-4o-mini, etc.).
       - key: SECRET_KEY
         generateValue: true
         description: A secret key used by Flask to secure user session cookies (automatically generated).
